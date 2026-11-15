@@ -45,6 +45,19 @@ So the useful question is not "how fast is the server?" but:
 Published agent-latency studies are GPU-only. As far as I know, this is the first public
 measurement of agent task time on **TPU with vLLM-TorchTPU**. See [related work](research/related-work.md).
 
+## System architecture
+
+![System architecture: benchmark harness, vLLM-TorchTPU on Cloud TPU v6e, study pipeline and autoserve loop](docs/architecture.png)
+
+- **Benchmark harness** ([harness/](harness/)): runs fixed agent tasks against the server, calls mock
+  tools with injected latency, and times every step.
+- **Cloud TPU v6e-1 VM** ([scripts/](scripts/)): vLLM-TorchTPU serves Qwen3.5-4B through an
+  OpenAI-compatible streaming API. The study varies four server knobs; vLLM's `/metrics` counters
+  show whether prefix caching and MTP actually worked.
+- **Study pipeline**: a sweep runs every combination, the analysis turns raw timings into speedups
+  with confidence intervals, and the outputs feed the paper and blog.
+- **Autoserve** (optional): a coding agent tunes `serve_config.env` against task time.
+
 ## Headline results (Cloud TPU v6e-1, Qwen3.5-4B, vLLM-TorchTPU 0.32.0, 14 Nov 2026)
 
 | Finding | Number |
