@@ -20,6 +20,7 @@ the one point we take from it. Most 2026 papers are arXiv preprints; see the ori
 | Wang et al. 2026, *XPerf* — [arXiv:2608.20370](https://arxiv.org/abs/2608.20370) | Trace replay for agent benchmarks; decode dominates when unsaturated, queueing under load. |
 | *Not All AI Agents Are Equal* — [arXiv:2609.19947](https://arxiv.org/abs/2609.19947) | The dominant time component varies by task, so results should be reported per workload. |
 | Guo et al. 2026, *SAGA* — [arXiv:2605.00528](https://arxiv.org/abs/2605.00528) | Workflow-level scheduling beats request-level scheduling on agent task time: throughput-optimal is not task-optimal. |
+| NVIDIA TensorRT-LLM, *Evaluating Agentic Serving with Trace Replay and Job-Level Metrics* — [tech blog](https://github.com/NVIDIA/TensorRT-LLM/blob/main/docs/source/blogs/tech_blog/blog27_Evaluating_Agentic_Serving_with_Trace_Replay_and_Job_Level_Metrics.md) | Replays tool calls as timed sleeps (the method our mock tools use) and argues for job-level metrics over token throughput. |
 | *LRAgent* — [arXiv:2602.01053](https://arxiv.org/abs/2602.01053) | Splits model latency from end-to-end agent latency, as this benchmark does. |
 
 ## Making agent serving faster
@@ -30,6 +31,7 @@ the one point we take from it. Most 2026 papers are arXiv preprints; see the ori
 | Sui et al. 2026, *PASTE* — [arXiv:2603.18897](https://arxiv.org/abs/2603.18897) | Running tools speculatively in parallel with generation shortens tasks: the tool side is the other lever. |
 | Lumer et al. 2026, *Don't Break the Cache* — [arXiv:2601.06007](https://arxiv.org/abs/2601.06007) | Prompt caching cuts agent TTFT; keep dynamic content at the end of the prompt. |
 | Norgren 2026, *Stateful Inference* — [arXiv:2605.26289](https://arxiv.org/abs/2605.26289) | Most of each agent turn's prompt is unchanged, so session KV reuse pays off. |
+| *Bursts That Outlast Themselves* (2026) — [arXiv:2611.13412](https://arxiv.org/abs/2611.13412) | With prefix caching on, a short burst of requests can push the cache-hit rate down for a long time. |
 | Liu et al. 2026, *Speculative Decoding: Performance or Illusion?* (MLSys 2026) — [arXiv:2601.11580](https://arxiv.org/abs/2601.11580) | Real speculative-decoding speedups fall short of theory and vary by workload and batch size. |
 | *AgentSpec* (2026) — [arXiv:2608.24004](https://arxiv.org/abs/2608.24004) | Speculative-decoding gains shrink as concurrency grows in agent workloads. |
 | Agrawal et al. 2024, *Sarathi-Serve* (OSDI) — [arXiv:2403.02310](https://arxiv.org/abs/2403.02310) | Chunked prefill and the throughput–latency trade-off behind `MAX_NUM_BATCHED_TOKENS`. |

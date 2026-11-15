@@ -7,7 +7,9 @@
 
 Most inference benchmarks answer one question: *how many tokens per second?* But nobody using an
 AI agent waits for tokens. They wait for the **task**: the agent reads the context, calls a tool,
-waits for the tool, thinks again, calls another tool, and finally answers.
+waits for the tool, thinks again, calls another tool, and finally answers. On GPUs, tool execution
+alone is 13–48% of end-to-end agent latency [1], and in half of the agent applications one study
+looked at, most of the time is spent outside the model [2].
 
 So I asked a different question: **when does faster inference actually make an agent faster?**
 
@@ -42,7 +44,7 @@ The harness ([GitHub](https://github.com/Petersonwei/tpu-agent-latency-bench)) r
 - 6 tool-calling tasks (order lookup, currency conversion, weather, calculator, doc search).
 
 The tools are mocks that sleep for a fixed time: 0 s, 0.5 s or 2 s per call. NVIDIA's agentic
-benchmark replays tool calls the same way. It isolates exactly the variable I care about: how slow
+trace-replay benchmark [3] and XPerf [4] replay tool calls the same way. It isolates exactly the variable I care about: how slow
 your tools are.
 
 I swept four server configurations:
@@ -57,7 +59,7 @@ I crossed them with three tool latencies, thinking on/off, 1 or 8 concurrent age
 4k or 16k tokens of shared context. That's 54 cells in about 4.5 hours of TPU time, which cost
 roughly US$12.
 
-Every speedup below has a **95% confidence interval**. It comes from a bootstrap that resamples
+Every speedup below has a **95% confidence interval**. It comes from a bootstrap [5] that resamples
 whole tasks, because repeats of the same task aren't independent.
 
 ## Finding 1: the slower your tools, the less the model matters
@@ -65,7 +67,7 @@ whole tasks, because repeats of the same task aren't independent.
 ![time share](figures/blog1_time_share.png)
 
 With instant tools, 100% of task time is the model. At 0.5 s per tool call it's 66%; at 2 s, only
-33%. This is Amdahl's law: if the model is a third of your task time, even an infinitely fast model
+33%. This is Amdahl's law [6]: if the model is a third of your task time, even an infinitely fast model
 can't make the task more than 1.5× faster.
 
 ## Finding 2: MTP's speedup shrinks on agents, but predictably
@@ -82,7 +84,7 @@ Two other observations:
 - **MTP-1 vs MTP-3:** MTP-1 (one draft token) gave nearly the same token speedup (1.42×) with a
   higher acceptance rate (91% vs 76%).
 - **Concurrency:** acceptance barely changed between 1 and 8 sessions. I expected a drop, based on
-  recent papers on speculative decoding under load.
+  recent papers on speculative decoding under load [7, 8].
 
 ## Finding 3: the feature tokens/s can't see
 
@@ -93,7 +95,7 @@ measured, you'd conclude it doesn't matter.
 
 For agents, it matters a lot. Every turn of an agent re-sends the same system prompt, tool
 definitions, context and conversation history. With prefix caching, vLLM reuses that work instead
-of recomputing it. With 4k tokens of shared context, it made agent tasks:
+of recomputing it [9, 10]. With 4k tokens of shared context, it made agent tasks:
 
 - **1.40× faster with one session** (95% CI 1.29–1.67);
 - **2.36× faster with eight** (2.20–2.55).
@@ -108,7 +110,7 @@ One more TPU-specific result. Qwen3.5 is a *hybrid* model: most of its layers us
 which makes prefix caching harder, and vLLM's support for it is still marked experimental. I
 logged vLLM's own counters to check it was really working. The cache hit **95–98%** of the time
 with one session. With eight sessions at 4k context it fell to 80%, and recent papers report the
-same kind of drop under load.
+same kind of drop under load [11, 12].
 
 ## Finding 4: thinking mode costs more than it buys (here)
 
@@ -117,7 +119,7 @@ Tasks took **5.3× longer** (95% CI 2.7–10.7), and success didn't improve: 80%
 without.
 
 For short tool-calling tasks on a 4B model, thinking was pure latency. That may change for harder
-tasks or larger models, and I'd test it before turning it on.
+tasks or larger models [13], and I'd test it before turning it on.
 
 ## What I'd tell an agent builder
 
@@ -149,5 +151,25 @@ number here: **[github.com/Petersonwei/tpu-agent-latency-bench](https://github.c
 
 One command sets up a TPU v6e VM. One more runs the full sweep. A local preflight (tests, a mock
 vLLM server and a simulated sweep) checks everything before you spend anything on TPU time.
+
+## References
+
+1. Park et al. 2026. *Aries.* [arXiv:2607.29069](https://arxiv.org/abs/2607.29069)
+2. Chang et al. 2026. *From LLM Inference to Agentic Workloads* (AgentSysBench). [arXiv:2608.15127](https://arxiv.org/abs/2608.15127)
+3. NVIDIA TensorRT-LLM. *Evaluating Agentic Serving with Trace Replay and Job-Level Metrics.* [Tech blog](https://github.com/NVIDIA/TensorRT-LLM/blob/main/docs/source/blogs/tech_blog/blog27_Evaluating_Agentic_Serving_with_Trace_Replay_and_Job_Level_Metrics.md)
+4. Wang et al. 2026. *Benchmarking LLM Serving Systems for Agentic AI Workloads with XPerf.* [arXiv:2608.20370](https://arxiv.org/abs/2608.20370)
+5. Efron & Tibshirani 1993. *An Introduction to the Bootstrap.* Chapman & Hall.
+6. Amdahl 1967. *Validity of the single processor approach to achieving large scale computing capabilities.* AFIPS Spring Joint Computer Conference.
+7. Liu et al. 2026. *Speculative Decoding: Performance or Illusion?* MLSys 2026. [arXiv:2601.11580](https://arxiv.org/abs/2601.11580)
+8. *AgentSpec.* 2026. [arXiv:2608.24004](https://arxiv.org/abs/2608.24004)
+9. Lumer et al. 2026. *Don't Break the Cache.* [arXiv:2601.06007](https://arxiv.org/abs/2601.06007)
+10. Norgren 2026. *Stateful Inference.* [arXiv:2605.26289](https://arxiv.org/abs/2605.26289)
+11. Li et al. 2025. *Continuum.* [arXiv:2511.02230](https://arxiv.org/abs/2511.02230)
+12. *Bursts That Outlast Themselves.* 2026. [arXiv:2611.13412](https://arxiv.org/abs/2611.13412)
+13. Ghoshal & Al-Bustami 2026. *When Do Tools and Planning Help LLMs Think?* [arXiv:2601.02663](https://arxiv.org/abs/2601.02663)
+
+Software and hardware: [vLLM-TorchTPU](https://github.com/vllm-project/vllm-torchtpu) ·
+Qwen3.5-4B · [Cloud TPU v6e](https://cloud.google.com/tpu/docs/v6e).
+More related work, with one takeaway per paper: [research/related-work.md](https://github.com/Petersonwei/tpu-agent-latency-bench/blob/main/research/related-work.md).
 
 *Built for the TorchTPU Sprint. Thanks to the vLLM-TorchTPU team. #TorchTPUSprint*
